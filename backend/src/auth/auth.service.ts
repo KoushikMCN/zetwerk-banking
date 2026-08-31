@@ -50,9 +50,10 @@ export class AuthService {
       return newUser;
     });
 
+    const accessToken = this.generateAccessToken(user.id, user.email)
+
     return {
-      id: user.id,
-      email: user.email,
+      accessToken,
     };
   }
 
@@ -91,13 +92,17 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    const accessToken = this.jwtService.sign({
-      sub: user.id,
-      email: user.email,
-    });
+    const accessToken = this.generateAccessToken(user.id, user.email);
 
     return {
       accessToken,
     };
+  }
+
+  private generateAccessToken(userId: string, email: string): string {
+    return this.jwtService.sign({
+      sub: userId,
+      email,
+    });
   }
 }
