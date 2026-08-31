@@ -8,7 +8,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTransferDto } from './dto/create-transfer.dto';
 
-import { Transfer } from '../generated/prisma/client';
+import { Prisma, Transfer } from '../generated/prisma/client';
+
+import { formatMoney } from '../common/utils/money.util';
 
 @Injectable()
 export class TransferService {
@@ -19,8 +21,10 @@ export class TransferService {
     dto: CreateTransferDto,
     idempotencyKey: string,
   ) {
-    if (!idempotencyKey) {
-      throw new BadRequestException('Idempotency-Key header is required');
+    if (!idempotencyKey || idempotencyKey.length > 100) {
+      throw new BadRequestException(
+        'A valid Idempotency-Key header is required',
+      );
     }
 
     const amount = this.parseAmount(dto.amount);
@@ -49,20 +53,21 @@ export class TransferService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const existingTransfer = await tx.transfer.findUnique({
-        where: { idempotencyKey },
-      });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const existingTransfer = await tx.transfer.findUnique({
+          where: { idempotencyKey },
+        });
 
-      if (existingTransfer) {
-        return this.serializeTransfer(existingTransfer);
-      }
+        if (existingTransfer) {
+          return this.serializeTransfer(existingTransfer);
+        }
 
-      const accountIds = [sourceAccount.id, destinationAccount.id].sort();
+        const accountIds = [sourceAccount.id, destinationAccount.id].sort();
 
-      const lockedAccounts = await tx.$queryRaw<
-        { id: string; balance: bigint }[]
-      >`
+        const lockedAccounts = await tx.$queryRaw<
+          { id: string; balance: bigint }[]
+        >`
         SELECT id, balance
         FROM accounts
         WHERE id IN (${accountIds[0]}::uuid, ${accountIds[1]}::uuid)
@@ -70,66 +75,99 @@ export class TransferService {
         FOR UPDATE
       `;
 
-      const lockedSource = lockedAccounts.find(
-        (account) => account.id === sourceAccount.id,
-      );
+        const lockedSource = lockedAccounts.find(
+          (account) => account.id === sourceAccount.id,
+        );
 
-      const lockedDestination = lockedAccounts.find(
-        (account) => account.id === destinationAccount.id,
-      );
+        const lockedDestination = lockedAccounts.find(
+          (account) => account.id === destinationAccount.id,
+        );
 
-      if (!lockedSource || !lockedDestination) {
-        throw new NotFoundException('Account not found');
+        if (!lockedSource || !lockedDestination) {
+          throw new NotFoundException('Account not found');
+        }
+
+        if (lockedSource.balance < amount) {
+          throw new BadRequestException('Insufficient balance');
+        }
+
+        const newSourceBalance = lockedSource.balance - amount;
+        const newDestinationBalance = lockedDestination.balance + amount;
+
+        await tx.account.update({
+          where: { id: sourceAccount.id },
+          data: { balance: newSourceBalance },
+        });
+
+        await tx.account.update({
+          where: { id: destinationAccount.id },
+          data: { balance: newDestinationBalance },
+        });
+
+        const transfer = await tx.transfer.create({
+          data: {
+            sourceAccountId: sourceAccount.id,
+            destinationAccountId: destinationAccount.id,
+            amount,
+            currency: sourceAccount.currency,
+            idempotencyKey,
+          },
+        });
+
+        await tx.transaction.createMany({
+          data: [
+            {
+              accountId: sourceAccount.id,
+              transferId: transfer.id,
+              type: 'DEBIT',
+              amount,
+              balanceAfter: newSourceBalance,
+            },
+            {
+              accountId: destinationAccount.id,
+              transferId: transfer.id,
+              type: 'CREDIT',
+              amount,
+              balanceAfter: newDestinationBalance,
+            },
+          ],
+        });
+
+        return this.serializeTransfer(transfer);
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const driverError = error.meta?.driverAdapterError;
+
+        const constraintName =
+          driverError &&
+          typeof driverError === 'object' &&
+          'cause' in driverError &&
+          driverError.cause &&
+          typeof driverError.cause === 'object' &&
+          'constraint' in driverError.cause &&
+          driverError.cause.constraint &&
+          typeof driverError.cause.constraint === 'object' &&
+          'index' in driverError.cause.constraint
+            ? driverError.cause.constraint.index
+            : undefined;
+
+        if (constraintName === 'transfers_idempotency_key_key') {
+          const existingTransfer = await this.prisma.transfer.findUnique({
+            where: { idempotencyKey },
+          });
+
+          if (existingTransfer) {
+            return this.serializeTransfer(existingTransfer);
+          }
+        }
       }
 
-      if (lockedSource.balance < amount) {
-        throw new BadRequestException('Insufficient balance');
-      }
-
-      const newSourceBalance = lockedSource.balance - amount;
-      const newDestinationBalance = lockedDestination.balance + amount;
-
-      await tx.account.update({
-        where: { id: sourceAccount.id },
-        data: { balance: newSourceBalance },
-      });
-
-      await tx.account.update({
-        where: { id: destinationAccount.id },
-        data: { balance: newDestinationBalance },
-      });
-
-      const transfer = await tx.transfer.create({
-        data: {
-          sourceAccountId: sourceAccount.id,
-          destinationAccountId: destinationAccount.id,
-          amount,
-          currency: sourceAccount.currency,
-          idempotencyKey,
-        },
-      });
-
-      await tx.transaction.createMany({
-        data: [
-          {
-            accountId: sourceAccount.id,
-            transferId: transfer.id,
-            type: 'DEBIT',
-            amount,
-            balanceAfter: newSourceBalance,
-          },
-          {
-            accountId: destinationAccount.id,
-            transferId: transfer.id,
-            type: 'CREDIT',
-            amount,
-            balanceAfter: newDestinationBalance,
-          },
-        ],
-      });
-
-      return this.serializeTransfer(transfer);
-    });
+      throw error;
+    }
   }
 
   private parseAmount(value: string): bigint {
@@ -154,7 +192,7 @@ export class TransferService {
   private serializeTransfer(transfer: Transfer) {
     return {
       ...transfer,
-      amount: transfer.amount.toString(),
+      amount: formatMoney(transfer.amount),
     };
   }
 }

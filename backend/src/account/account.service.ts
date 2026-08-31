@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { formatMoney } from '../common/utils/money.util';
 
 @Injectable()
 export class AccountService {
@@ -57,7 +58,7 @@ export class AccountService {
 
     return transactions.map((transaction) => ({
       ...transaction,
-      amount: transaction.amount.toString(),
+      amount: formatMoney(transaction.amount),
       balanceAfter: transaction.balanceAfter.toString(),
     }));
   }
