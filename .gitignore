@@ -1,0 +1,73 @@
+# =========================
+# Environment / Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Node
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# TypeScript
+# =========================
+*.tsbuildinfo
+
+# =========================
+# NestJS / Backend
+# =========================
+backend/dist/
+backend/coverage/
+backend/.eslintcache
+
+# =========================
+# Next.js / Frontend
+# =========================
+frontend/.next/
+frontend/out/
+frontend/coverage/
+frontend/.vercel/
+
+# =========================
+# Prisma
+# =========================
+# Prisma migrations SHOULD be committed.
+# Do NOT ignore prisma/migrations/
+backend/src/generated/
+
+# =========================
+# Testing
+# =========================
+coverage/
+.nyc_output/
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE / Editors
+# =========================
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp

@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  account      Account?
+
+  @@map("users")
+}
+
+model Account {
+  id                String        @id @default(uuid()) @db.Uuid
+  userId            String        @unique @map("user_id") @db.Uuid
+  accountNumber     String        @unique @map("account_number") @db.VarChar(20)
+  balance           BigInt        @default(0)
+  currency          String        @default("INR") @db.Char(3)
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  user              User          @relation(fields: [userId], references: [id])
+  transactions      Transaction[]
+  receivedTransfers Transfer[]    @relation("DestinationAccount")
+  sentTransfers     Transfer[]    @relation("SourceAccount")
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Transfer {
+  id                   String         @id @default(uuid()) @db.Uuid
+  sourceAccountId      String         @map("source_account_id") @db.Uuid
+  destinationAccountId String         @map("destination_account_id") @db.Uuid
+  amount               BigInt
+  currency             String         @default("INR") @db.Char(3)
+  status               TransferStatus @default(COMPLETED)
+  idempotencyKey       String         @unique @map("idempotency_key") @db.VarChar(100)
+  createdAt            DateTime       @default(now()) @map("created_at")
+  transactions         Transaction[]
+  destinationAccount   Account        @relation("DestinationAccount", fields: [destinationAccountId], references: [id])
+  sourceAccount        Account        @relation("SourceAccount", fields: [sourceAccountId], references: [id])
+
+  @@index([sourceAccountId])
+  @@index([destinationAccountId])
+  @@index([createdAt])
+  @@map("transfers")
+}
+
+model Transaction {
+  id           String          @id @default(uuid()) @db.Uuid
+  accountId    String          @map("account_id") @db.Uuid
+  transferId   String          @map("transfer_id") @db.Uuid
+  type         TransactionType
+  amount       BigInt
+  balanceAfter BigInt          @map("balance_after")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  account      Account         @relation(fields: [accountId], references: [id])
+  transfer     Transfer        @relation(fields: [transferId], references: [id])
+
+  @@index([accountId, createdAt])
+  @@index([transferId])
+  @@map("transactions")
+}
+
+enum TransferStatus {
+  COMPLETED
+}
+
+enum TransactionType {
+  DEBIT
+  CREDIT
+}
