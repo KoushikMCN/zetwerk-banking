@@ -1,13 +1,7 @@
-import type { Metadata } from "next"
 import type { ReactNode } from "react"
 
 interface AuthLayoutProps {
     children: ReactNode
-}
-
-export const metadata: Metadata = {
-    title: "Login | Zetwerk Banking",
-    description: "Secure digital banking",
 }
 
 export default function AuthLayout({ children }: AuthLayoutProps) {

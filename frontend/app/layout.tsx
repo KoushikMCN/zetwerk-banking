@@ -1,23 +1,29 @@
-import type { Metadata } from 'next';
-import './globals.css';
+import type { Metadata } from "next"
 
-import { QueryProvider } from '@/components/providers/query-provider';
+import { Toaster } from "sonner"
+
+import { QueryProvider } from "@/components/providers/query-provider"
+
+import "./globals.css"
 
 export const metadata: Metadata = {
-  title: 'Zetwerk Banking',
-  description: 'Secure digital banking',
-};
+    title: "Zetwerk Banking",
+    description: "Secure digital banking",
+}
 
 export default function RootLayout({
-  children,
+    children,
 }: Readonly<{
-  children: React.ReactNode;
+    children: React.ReactNode
 }>) {
-  return (
-    <html lang="en">
-      <body>
-        <QueryProvider>{children}</QueryProvider>
-      </body>
-    </html>
-  );
+    return (
+        <html lang="en">
+            <body>
+                <QueryProvider>
+                    {children}
+                    <Toaster position="top-right" richColors closeButton />
+                </QueryProvider>
+            </body>
+        </html>
+    )
 }

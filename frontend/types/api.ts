@@ -1,41 +1,45 @@
 export interface AuthMessageResponse {
-  message: string;
+    message: string
 }
 
 export interface CurrentUser {
-  userId: string;
-  email: string;
+    userId: string
+    email: string
 }
 
 export interface Account {
-  accountNumber: string;
-  balance: string;
-  currency: string;
-  createdAt: string;
+    accountNumber: string
+    balance: string
+    currency: string
+    createdAt: string
 }
 
-export type TransactionType = 'DEBIT' | 'CREDIT';
+export type TransactionType = "DEBIT" | "CREDIT"
 
 export interface Transaction {
-  id: string;
-  type: TransactionType;
-  amount: string;
-  balanceAfter: string;
-  createdAt: string;
-  transfer: {
-    id: string;
-    sourceAccountId: string;
-    destinationAccountId: string;
-  };
+    id: string
+    type: TransactionType
+    amount: string
+    balanceAfter: string
+    createdAt: string
+    transfer: {
+        id: string
+        sourceAccount: {
+            accountNumber: string
+        }
+        destinationAccount: {
+            accountNumber: string
+        }
+    }
 }
 
 export interface TransferResponse {
-  id: string;
-  sourceAccountId: string;
-  destinationAccountId: string;
-  amount: string;
-  currency: string;
-  status: 'COMPLETED';
-  idempotencyKey: string;
-  createdAt: string;
+    id: string
+    sourceAccountId: string
+    destinationAccountId: string
+    amount: string
+    currency: string
+    status: "COMPLETED"
+    idempotencyKey: string
+    createdAt: string
 }
