@@ -4,6 +4,7 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { randomInt } from 'crypto';
@@ -12,8 +13,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../generated/prisma/client';
 import { RegisterDto } from './dto/register.dto';
 
+const DEMO_INITIAL_BALANCE = 2500000n;
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -44,13 +49,16 @@ export class AuthService {
         data: {
           userId: newUser.id,
           accountNumber: await this.generateAccountNumber(tx),
+          balance: DEMO_INITIAL_BALANCE,
         },
       });
 
       return newUser;
     });
 
-    const accessToken = this.generateAccessToken(user.id, user.email)
+    this.logger.log(`User registered: ${user.id}`);
+
+    const accessToken = this.generateAccessToken(user.id, user.email);
 
     return {
       accessToken,
@@ -83,14 +91,18 @@ export class AuthService {
     });
 
     if (!user) {
+      this.logger.warn('Login failed: invalid credentials');
       throw new UnauthorizedException('Invalid email or password');
     }
 
     const passwordValid = await bcrypt.compare(dto.password, user.passwordHash);
 
     if (!passwordValid) {
+      this.logger.warn(`Login failed for user: ${user.id}`);
       throw new UnauthorizedException('Invalid email or password');
     }
+
+    this.logger.log(`User logged in: ${user.id}`);
 
     const accessToken = this.generateAccessToken(user.id, user.email);
 

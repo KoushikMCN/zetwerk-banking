@@ -19,6 +19,7 @@ export function TransferForm() {
 
     const [isReviewing, setIsReviewing] = useState(false)
     const [showBalance, setShowBalance] = useState(false)
+    const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null)
 
     const router = useRouter()
 
@@ -36,12 +37,17 @@ export function TransferForm() {
     })
 
     function handleReview() {
+        setIdempotencyKey(crypto.randomUUID())
         setIsReviewing(true)
     }
 
     async function handleConfirm() {
         const values = getValues()
-        const idempotencyKey = crypto.randomUUID()
+
+        if (!idempotencyKey) {
+            toast.error("Unable to prepare the transfer. Please try again.")
+            return
+        }
 
         try {
             await transferMutation.mutateAsync({
@@ -89,12 +95,15 @@ export function TransferForm() {
                     </div>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
                     <button
                         type="button"
                         disabled={isSubmitting}
-                        onClick={() => setIsReviewing(false)}
-                        className="h-12 flex-1 border border-[#d9dce3] px-5 text-sm font-semibold text-[#020b36] transition hover:bg-[#f8faff] disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => {
+                            setIdempotencyKey(null)
+                            setIsReviewing(false)
+                        }}
+                        className="flex h-12 flex-1 items-center justify-center border border-[#d9dce3] px-5 text-sm font-semibold text-[#020b36] transition hover:bg-[#f8faff] disabled:cursor-not-allowed disabled:opacity-60 py-2"
                     >
                         Go back
                     </button>
@@ -103,7 +112,7 @@ export function TransferForm() {
                         type="button"
                         disabled={isSubmitting}
                         onClick={handleConfirm}
-                        className="flex h-12 flex-1 items-center justify-center gap-2 bg-[#2480fd] px-5 text-sm font-semibold text-white transition hover:bg-[#176fe8] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="flex h-12 flex-1 items-center justify-center gap-2 bg-[#2480fd] px-5 text-sm font-semibold text-white transition hover:bg-[#176fe8] disabled:cursor-not-allowed disabled:opacity-60 py-2"
                     >
                         {isSubmitting ? (
                             <>

@@ -31,7 +31,6 @@ model Account {
   receivedTransfers Transfer[]    @relation("DestinationAccount")
   sentTransfers     Transfer[]    @relation("SourceAccount")
 
-  @@index([userId])
   @@map("accounts")
 }
 

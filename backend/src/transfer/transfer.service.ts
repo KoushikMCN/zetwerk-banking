@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
@@ -14,6 +15,8 @@ import { formatMoney } from '../common/utils/money.util';
 
 @Injectable()
 export class TransferService {
+  private readonly logger = new Logger(TransferService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async transfer(
@@ -28,6 +31,8 @@ export class TransferService {
     }
 
     const amount = this.parseAmount(dto.amount);
+
+    this.logger.log(`Transfer initiated by user: ${userId}`);
 
     const sourceAccount = await this.prisma.account.findUnique({
       where: { userId },
@@ -60,6 +65,7 @@ export class TransferService {
         });
 
         if (existingTransfer) {
+          this.logger.log(`Idempotent transfer replay for user: ${userId}`);
           return this.serializeTransfer(existingTransfer);
         }
 
@@ -133,6 +139,10 @@ export class TransferService {
           ],
         });
 
+        this.logger.log(
+          `Transfer completed: ${transfer.id} for user: ${userId}`,
+        );
+
         return this.serializeTransfer(transfer);
       });
     } catch (error) {
@@ -191,8 +201,13 @@ export class TransferService {
 
   private serializeTransfer(transfer: Transfer) {
     return {
-      ...transfer,
+      id: transfer.id,
+      sourceAccountId: transfer.sourceAccountId,
+      destinationAccountId: transfer.destinationAccountId,
       amount: formatMoney(transfer.amount),
+      currency: transfer.currency,
+      status: transfer.status,
+      createdAt: transfer.createdAt,
     };
   }
 }

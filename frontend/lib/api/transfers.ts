@@ -12,7 +12,6 @@ export interface Transfer {
     amount: string
     currency: string
     status: 'COMPLETED'
-    idempotencyKey: string
     createdAt: string
 }
 

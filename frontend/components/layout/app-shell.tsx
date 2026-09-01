@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query"
 
 import { logout } from "@/lib/api/auth"
 import { useCurrentUser } from "@/lib/auth/use-current-user"
+import Link from "next/link"
 
 interface AppShellProps {
     children: React.ReactNode
@@ -56,8 +57,8 @@ export function AppShell({ children }: AppShellProps) {
     return (
         <div className="min-h-screen bg-[#fffef1]">
             <header className="border-b border-[#e5e7eb] bg-[#fffef1]">
-                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
-                    <div className="flex items-center gap-3">
+                <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center justify-between px-6 sm:px-8 lg:px-12 2xl:px-16">
+                    <Link href="/dashboard" className="flex items-center gap-3">
                         <div className="flex h-9 w-9 items-center justify-center bg-[#020b36] text-white">
                             <Wallet size={18} />
                         </div>
@@ -67,7 +68,7 @@ export function AppShell({ children }: AppShellProps) {
 
                             <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#667085]">Banking</p>
                         </div>
-                    </div>
+                    </Link>
 
                     <div className="relative" ref={dropdownRef}>
                         <button
@@ -75,9 +76,9 @@ export function AppShell({ children }: AppShellProps) {
                             onClick={() => setIsOpen((open) => !open)}
                             aria-expanded={isOpen}
                             aria-haspopup="menu"
-                            className="flex items-center gap-2 text-sm font-medium text-[#020b36] transition-colors hover:text-[#2480fd]"
+                            className="flex min-w-0 max-w-40 items-center gap-2 text-sm font-medium text-[#020b36] transition-colors hover:text-[#2480fd] sm:max-w-none"
                         >
-                            <span>{user?.email ?? "Account"}</span>
+                            <span className="min-w-0 truncate">{user?.email ?? "Account"}</span>
 
                             <ChevronDown size={16} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />
                         </button>
@@ -105,7 +106,7 @@ export function AppShell({ children }: AppShellProps) {
                 </div>
             </header>
 
-            <main className="mx-auto max-w-7xl px-6 py-10 lg:px-8">{children}</main>
+            <main className="mx-auto w-full max-w-[1600px] px-6 py-10 sm:px-8 lg:px-12 2xl:px-16">{children}</main>
         </div>
     )
 }

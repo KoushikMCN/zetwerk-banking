@@ -66,6 +66,10 @@ export function AuthForm({ mode }: AuthFormProps) {
                 <p className="mt-3 text-base leading-7 text-[#667085]">
                     {isLogin ? "Access your account and manage your money." : "Create an account to start managing your money."}
                 </p>
+
+                <p className="mt-3 text-base leading-7 text-black/40">
+                    {!isLogin && "New accounts are initialized with a demo balance of ₹25,000 to allow immediate testing of transfers."}
+                </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">

@@ -1,45 +1,56 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 if (!API_URL) {
-  throw new Error('NEXT_PUBLIC_API_URL is not configured');
+    throw new Error("NEXT_PUBLIC_API_URL is not configured")
 }
 
 export class ApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
+    constructor(
+        message: string,
+        public readonly status: number
+    ) {
+        super(message)
+        this.name = "ApiError"
+    }
 }
 
-export async function apiFetch<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
+function getErrorMessage(data: unknown): string {
+    if (data && typeof data === "object" && "message" in data) {
+        const message = data.message
 
-  const data = await response.json().catch(() => null);
+        if (typeof message === "string") {
+            return message
+        }
 
-  if (!response.ok) {
-    const message =
-      data &&
-      typeof data === 'object' &&
-      'message' in data &&
-      typeof data.message === 'string'
-        ? data.message
-        : 'Something went wrong';
+        if (Array.isArray(message) && message.every((item) => typeof item === "string")) {
+            return message.join(", ")
+        }
+    }
 
-    throw new ApiError(message, response.status);
-  }
+    return "Something went wrong"
+}
 
-  return data as T;
+export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+    let response: Response
+
+    try {
+        response = await fetch(`${API_URL}${path}`, {
+            ...options,
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+                ...options.headers,
+            },
+        })
+    } catch {
+        throw new ApiError("Unable to connect to the server. Please try again.", 0)
+    }
+
+    const data = await response.json().catch(() => null)
+
+    if (!response.ok) {
+        throw new ApiError(getErrorMessage(data), response.status)
+    }
+
+    return data as T
 }
