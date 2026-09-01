@@ -29,8 +29,8 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  await app.listen(process.env.PORT ?? 3000);
-  logger.log(`App is listening on port ${process.env.PORT ?? 3000}`);
+  await app.listen(process.env.PORT ?? 3005);
+  logger.log(`App is listening on port ${process.env.PORT ?? 3005}`);
 }
 
 bootstrap();
